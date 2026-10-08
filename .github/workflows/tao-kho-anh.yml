@@ -1,0 +1,82 @@
+# Tạo kho ảnh lưỡi trên máy chủ GitHub – không cần cài gì trên máy tính.
+# Vào tab Actions → "Tạo kho ảnh lưỡi" → Run workflow.
+name: Tạo kho ảnh lưỡi
+
+on:
+  workflow_dispatch:
+    inputs:
+      chi_tiet:
+        description: "Mã ảnh cần bản phóng to (12 ký tự, cách nhau bằng dấu cách). Để trống khi tạo kho lần đầu."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kho-anh
+  cancel-in-progress: false
+
+jobs:
+  tao:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      CHI_TIET: ${{ inputs.chi_tiet }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Kiểm tra mã ảnh nhập vào
+        if: ${{ inputs.chi_tiet != '' }}
+        run: |
+          for m in $CHI_TIET; do
+            [[ "$m" =~ ^[0-9a-f]{12}$ ]] || { echo "Mã không hợp lệ: $m (mỗi mã gồm 12 ký tự 0-9, a-f)"; exit 1; }
+          done
+          [ -f danh-muc.json ] || { echo "Chưa có danh-muc.json – hãy chạy tạo kho lần đầu (để trống ô mã ảnh)."; exit 1; }
+
+      - name: Cài thư viện
+        run: pip install pillow
+
+      - name: Tải bộ dữ liệu từ Dryad (2,3 GB)
+        run: |
+          curl -L --fail --retry 5 --retry-delay 20 \
+            -A "luong-y-picures/1.0 (GitHub Actions; hoc tap ca nhan)" \
+            -o ds.zip "https://datadryad.org/downloads/file_stream/4540656"
+          SIZE=$(stat -c%s ds.zip)
+          echo "Kích thước: $SIZE byte"
+          if [ "$SIZE" -lt 2000000000 ]; then echo "File tải về quá nhỏ – Dryad có thể không cho tải tự động. Chuyển sang cách làm trên máy tính."; exit 1; fi
+          sha256sum ds.zip | tee sha256-ban-goc.txt
+
+      - name: Giải nén
+        run: |
+          unzip -q ds.zip -d goc
+          rm ds.zip
+          du -sh goc
+
+      - name: Tạo kho ảnh (lần đầu)
+        if: ${{ inputs.chi_tiet == '' }}
+        run: |
+          python xu-ly-kho-anh.py tao goc kho
+          rm -f kho/goc-duong-dan.txt
+          rm -rf anh && mv kho/anh ./anh
+          mv kho/danh-muc.json kho/bao-cao.txt ./
+          touch .nojekyll
+
+      - name: Tạo bản phóng to theo mã
+        if: ${{ inputs.chi_tiet != '' }}
+        run: python xu-ly-kho-anh.py chitiet . goc $CHI_TIET
+
+      - name: Lưu vào repo
+        run: |
+          rm -rf goc kho
+          git config user.name "kho-anh-bot"
+          git config user.email "kho-anh-bot@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "Không có thay đổi"; exit 0; fi
+          git commit -q -m "Cập nhật kho ảnh lưỡi"
+          git pull --rebase -q || true
+          git push
