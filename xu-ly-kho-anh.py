@@ -5,19 +5,19 @@ Xử lý TOÀN BỘ bộ ảnh lưỡi TCM-Tongue (Dryad, DOI 10.5061/dryad.1c59
 CÀI ĐẶT (một lần):   pip install pillow
 
 1) TẠO KHO ẢNH (chạy một lần, khoảng 15–40 phút tùy máy):
-     python xu-ly-kho-anh.py tao "D:\\duong-dan\\shezhenv3 txt" "D:\\luong-y-picures"
-   Kết quả trong D:\\luong-y-picures :
+     python xu-ly-kho-anh.py tao "D:\\duong-dan\\shezhenv3 txt" "D:\\luong-y-pictures"
+   Kết quả trong D:\\luong-y-pictures :
      anh/ab/xxxx.webp    bản xem (cạnh dài 560 px, ~20–30 KB/ảnh) cho mọi ảnh
      chi-tiet/xxxx.jpg   bản phóng to (cạnh dài 1000 px, màu giữ nguyên 4:4:4) – chỉ tạo khi được chọn
      danh-muc.json       danh mục: nhãn + khung vị trí của từng ảnh (dùng cho app)
      bao-cao.txt         số ảnh mỗi nhãn, ảnh lỗi bị loại, ảnh trùng
-   Đưa cả thư mục lên repo GitHub mới tên "luong-y-picures" và bật Pages.
+   Đưa cả thư mục lên repo GitHub mới tên "luong-y-pictures" và bật Pages.
 
 2b) TẠO BẢN PHÓNG TO theo mã ảnh:
-     python xu-ly-kho-anh.py chitiet "D:\\luong-y-picures" "D:\\duong-dan\\goc" 05ab68d03a7c 652dab587ffb
+     python xu-ly-kho-anh.py chitiet "D:\\luong-y-pictures" "D:\\duong-dan\\goc" 05ab68d03a7c 652dab587ffb
 
 2) TÌM ẢNH KHỚP CHÍNH XÁC cho bệnh án (chỉ lấy ảnh có ĐÚNG và ĐỦ các đặc điểm, không thừa nhãn):
-     python xu-ly-kho-anh.py tim "D:\\luong-y-picures" ban-dai xi-ngan bach-thai
+     python xu-ly-kho-anh.py tim "D:\\luong-y-pictures" ban-dai xi-ngan bach-thai
    In ra các ảnh phù hợp; thêm --chi-tiet để tạo luôn bản phóng to cho các ảnh đó.
 
 Nguyên tắc: không chỉnh màu, không lọc làm đẹp (màu lưỡi là dữ kiện chẩn đoán).
@@ -94,12 +94,21 @@ def tao(goc, ra):
         except Exception as e:
             loi.append(f"{a.name}: {e}"); continue
         thay[h] = a.name
-        khung = doc_khung(f)
+        khung_tho = doc_khung(f)
+        khung = [b for b in khung_tho if b[0] in NHAN]          # bỏ nhãn lạ ngoài 20 loại đã biết
+        if len(khung) < len(khung_tho): loi.append(f"{a.name}: bỏ {len(khung_tho)-len(khung)} nhãn lạ")
         if not khung: loi.append(f"{a.name}: không có nhãn"); continue
         luu(im, ra/"anh"/thu_muc_con(h)/f"{h}.webp", CANH_XEM, "webp", CL_XEM, icc)
         for k in {b[0] for b in khung}: dem[k] = dem.get(k,0)+1
         danh_muc.append({"id":h,"goc":str(a.relative_to(goc)).replace("\\","/"),"phan":phan,"khung":khung})
         if i % 500 == 0: print(f"  đã xử lý {i} ảnh…")
+    if not danh_muc:
+        print("LỖI: không tìm thấy cặp ảnh + nhãn YOLO nào (cần thư mục images/ và labels/ cạnh nhau).")
+        print("Cấu trúc thư mục nhận được:")
+        for i, p in enumerate(sorted(Path(goc).rglob("*"))):
+            if i >= 40: break
+            print("  ", p.relative_to(goc))
+        sys.exit(1)
     meta = {"nguon":"TCM-Tongue, Dryad DOI 10.5061/dryad.1c59zw48r",
             "nhan":{v[0]:{"ten":v[1],"nhom":v[2],"giao_trinh":v[3]} for v in NHAN.values()},
             "ma_so":{str(k):v[0] for k,v in NHAN.items()}, "anh":danh_muc}
