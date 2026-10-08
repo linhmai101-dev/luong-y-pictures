@@ -5,6 +5,15 @@ name: Tạo kho ảnh lưỡi
 on:
   workflow_dispatch:
     inputs:
+      nguon:
+        description: "Lấy bộ dữ liệu từ đâu"
+        type: choice
+        options: ["dryad", "google-drive"]
+        default: "dryad"
+      drive_id:
+        description: "Nếu chọn google-drive: dán mã file Drive (phần giữa /d/ và /view trong link chia sẻ)"
+        required: false
+        default: ""
       chi_tiet:
         description: "Mã ảnh cần bản phóng to (12 ký tự, cách nhau bằng dấu cách). Để trống khi tạo kho lần đầu."
         required: false
@@ -23,6 +32,9 @@ jobs:
     timeout-minutes: 120
     env:
       CHI_TIET: ${{ inputs.chi_tiet }}
+      NGUON: ${{ inputs.nguon }}
+      DRIVE_ID: ${{ inputs.drive_id }}
+      MIN_SIZE: "2000000000"
     steps:
       - uses: actions/checkout@v4
 
@@ -41,20 +53,37 @@ jobs:
       - name: Cài thư viện
         run: pip install pillow
 
-      - name: Tải bộ dữ liệu từ Dryad (2,3 GB)
+      - name: Tải bộ dữ liệu (2,3 GB)
         run: |
-          curl -L --fail --retry 5 --retry-delay 20 \
-            -A "luong-y-picures/1.0 (GitHub Actions; hoc tap ca nhan)" \
-            -o ds.zip "https://datadryad.org/downloads/file_stream/4540656"
-          SIZE=$(stat -c%s ds.zip)
+          UA="luong-y-pictures/1.0 (GitHub Actions; hoc tap ca nhan; lien he qua github.com/linhmai101-dev)"
+          tai() { curl -L --retry 3 --retry-delay 15 -A "$UA" -o ds.zip -w "%{http_code}" "$1"; }
+          if [ "$NGUON" = "google-drive" ]; then
+            [[ "$DRIVE_ID" =~ ^[A-Za-z0-9_-]{20,}$ ]] || { echo "Mã file Drive không hợp lệ: '$DRIVE_ID'"; exit 1; }
+            pip install -q gdown
+            gdown --fuzzy "https://drive.google.com/file/d/$DRIVE_ID/view" -O ds.zip || { echo "Không tải được từ Drive. Kiểm tra file đã để chế độ 'Bất kỳ ai có đường liên kết' chưa."; exit 1; }
+          else
+            for URL in "https://datadryad.org/api/v2/files/4540656/download" "https://datadryad.org/downloads/file_stream/4540656"; do
+              echo "Thử: $URL"; CODE=$(tai "$URL" || true); echo "Mã phản hồi: $CODE"
+              SIZE=$(stat -c%s ds.zip 2>/dev/null || echo 0)
+              if [ "$SIZE" -ge "$MIN_SIZE" ]; then break; fi
+            done
+          fi
+          SIZE=$(stat -c%s ds.zip 2>/dev/null || echo 0)
           echo "Kích thước: $SIZE byte"
-          if [ "$SIZE" -lt 2000000000 ]; then echo "File tải về quá nhỏ – Dryad có thể không cho tải tự động. Chuyển sang cách làm trên máy tính."; exit 1; fi
+          if [ "$SIZE" -lt "$MIN_SIZE" ]; then
+            echo "::error::Không tải được bộ dữ liệu ($SIZE byte). Nếu nguồn là Dryad: Dryad chặn tải tự động – hãy chạy lại với nguồn google-drive."
+            exit 1
+          fi
           sha256sum ds.zip | tee sha256-ban-goc.txt
 
       - name: Giải nén
         run: |
-          unzip -q ds.zip -d goc
+          unzip -q ds.zip -d goc || { echo "::error::File zip bị hỏng hoặc tải chưa hết."; exit 1; }
           rm ds.zip
+          # nếu bên trong còn file zip con (coco / txt / xml) thì giải nén tiếp
+          find goc -type f -name "*.zip" | while IFS= read -r z; do
+            echo "Giải nén tiếp: $z"; unzip -q "$z" -d "${z%.zip}" && rm "$z"
+          done
           du -sh goc
 
       - name: Tạo kho ảnh (lần đầu)
