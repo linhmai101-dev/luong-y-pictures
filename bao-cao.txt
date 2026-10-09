@@ -21,7 +21,7 @@ Vùng tỳ vị lõm                     179   (ngoài giáo trình – tham kh�
 Vùng tâm phế lõm                     2   (ngoài giáo trình – tham khảo)
 Vùng tâm phế lồi                   370   (ngoài giáo trình – tham khảo)
 
-Ảnh có cờ xoay EXIF (cần mở xem thử vài ảnh): 19
+Ảnh có cờ xoay EXIF (đã xoay đúng chiều): 19
 shezhen datasets/shezhenv3-coco/shezhenv3-coco/test/images/10344.jpg
 shezhen datasets/shezhenv3-coco/shezhenv3-coco/test/images/10387.jpg
 shezhen datasets/shezhenv3-coco/shezhenv3-coco/test/images/10458.jpg
@@ -41,5 +41,57 @@ shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/C (975).jpg
 shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (247).jpg
 shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (58).jpg
 shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (362).jpg
+
+Ảnh trùng nhưng nhãn KHÁC nhau (đã đánh dấu, app không dùng để hỏi): 99
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/B (164).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/B (187).jpg | shezhen datasets/shezhenv3-txt/train/images/B (187).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/B (454).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/B (481).jpg | shezhen datasets/shezhenv3-txt/train/images/B (481).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/A (1420).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/C (1084).jpg | shezhen datasets/shezhenv3-txt/train/images/C (1084).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/BB (3).jpeg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/C11113.jpg | shezhen datasets/shezhenv3-txt/train/images/C11113.jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/BB (6).jpeg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/C11114.jpg | shezhen datasets/shezhenv3-txt/train/images/C11114.jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/AA (74).jpeg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/CC (12).jpeg | shezhen datasets/shezhenv3-txt/train/images/CC (12).jpeg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/C (485).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (510).jpg | shezhen datasets/shezhenv3-txt/train/images/E (510).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (17).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1016).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1016).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (19).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1022).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1022).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (21).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1024).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1024).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (33).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1060).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1060).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (34).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1065).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1065).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (42).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1083).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1083).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (45).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1090).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1090).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (63).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1127).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1127).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (64).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1133).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1133).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (72).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1151).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1151).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (83).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1187).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1187).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (89).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1208).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1208).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (100).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1240).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1240).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1212).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (126).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (212).jpg | shezhen datasets/shezhenv3-txt/train/images/F (126).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (212).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (112).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1265).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1265).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (124).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1300).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1300).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/test/images/A (218).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1303).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1303).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (125).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1304).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1304).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (126).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1306).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1306).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1314).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (132).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (213).jpg | shezhen datasets/shezhenv3-txt/train/images/F (132).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (213).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (150).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1422).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1422).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (155).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1441).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1441).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (157).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1444).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1444).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (159).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1458).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1458).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (163).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (1467).jpg | shezhen datasets/shezhenv3-txt/train/images/F (1467).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/EE (21).jpeg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (590).jpg | shezhen datasets/shezhenv3-txt/train/images/F (590).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (102).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (608).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (207).jpg | shezhen datasets/shezhenv3-txt/train/images/F (608).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (207).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (109).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (683).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (209).jpg | shezhen datasets/shezhenv3-txt/train/images/F (683).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (209).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (477).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (92).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (204).jpg | shezhen datasets/shezhenv3-txt/train/images/F (92).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (204).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (4).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (981).jpg | shezhen datasets/shezhenv3-txt/train/images/F (981).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (10).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (995).jpg | shezhen datasets/shezhenv3-txt/train/images/F (995).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/B (483).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/A (15).jpg | shezhen datasets/shezhenv3-txt/val/images/A (15).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (22).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (11).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (11).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (23).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (12).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (12).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (250).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (177).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (177).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (90).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (202).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (202).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (481).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (205).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (205).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (140).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (217).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (217).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (46).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (22).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (22).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (158).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (225).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (225).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (180).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (228).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (228).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (184).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (230).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (230).jpg
+  shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/F (190).jpg | shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (234).jpg | shezhen datasets/shezhenv3-txt/val/images/tongue (234).jpg
 
 Ảnh lỗi:
