@@ -76,32 +76,52 @@ def luu(im, path, canh, fmt, q, icc=None):
 def thu_muc_con(h):
     return h[:2]   # chia 256 thư mục con để GitHub và máy tính duyệt nhanh
 
-def tao(goc, ra):
-    ra = Path(ra); (ra/"anh").mkdir(parents=True, exist_ok=True)
-    danh_muc, loi, trung, dem, thay, xoay = [], [], 0, {k:0 for k in NHAN}, {}, []
-    for i, (a, f, phan) in enumerate(cap_anh_nhan(goc), 1):
+def _ma_hoa(viec):
+    """Chạy trong tiến trình con: mở, kiểm tra, nén một ảnh. Trả về (mã, lỗi, có_cờ_xoay)."""
+    duong_dan, ra_file = viec
+    try:
+        im = Image.open(duong_dan); im.load()
+        # chỉ giữ hồ sơ màu khi ảnh gốc là RGB (hồ sơ CMYK gắn vào ảnh RGB sẽ làm sai màu)
+        icc = im.info.get("icc_profile") if im.mode in ("RGB", "RGBA", "P", "L") else None
         try:
-            raw = a.read_bytes(); h = hashlib.sha1(raw).hexdigest()[:12]
-            if h in thay: trung += 1; continue
-            im = Image.open(io.BytesIO(raw)); im.load()
-            icc = im.info.get("icc_profile")
-            try:
-                huong = im.getexif().get(274, 1)
-            except Exception:
-                huong = 1
-            if huong not in (1, None): xoay.append(a.name)   # ảnh có cờ xoay: báo để kiểm tra, không tự xoay (khung nhãn tính theo ảnh gốc)
-            im = im.convert("RGB")
+            huong = im.getexif().get(274, 1)
+        except Exception:
+            huong = 1
+        luu(im.convert("RGB"), Path(ra_file), CANH_XEM, "webp", CL_XEM, icc)
+        return None, huong not in (1, None)
+    except Exception as e:
+        return str(e), False
+
+def tao(goc, ra):
+    import time
+    from concurrent.futures import ProcessPoolExecutor
+    t0 = time.time()
+    goc, ra = Path(goc), Path(ra); (ra/"anh").mkdir(parents=True, exist_ok=True)
+    danh_muc, loi, trung, dem, thay, xoay = [], [], 0, {k:0 for k in NHAN}, {}, []
+    # Lượt 1 (nhanh, tuần tự): đọc nhãn, bỏ ảnh trùng, lập danh sách việc
+    viec, ung_vien = [], []
+    for a, f, phan in sorted(cap_anh_nhan(goc), key=lambda x: str(x[0])):   # sắp xếp để kết quả luôn giống nhau
+        try:
+            h = hashlib.sha1(a.read_bytes()).hexdigest()[:12]
         except Exception as e:
             loi.append(f"{a.name}: {e}"); continue
+        if h in thay: trung += 1; continue
         thay[h] = a.name
         khung_tho = doc_khung(f)
         khung = [b for b in khung_tho if b[0] in NHAN]          # bỏ nhãn lạ ngoài 20 loại đã biết
         if len(khung) < len(khung_tho): loi.append(f"{a.name}: bỏ {len(khung_tho)-len(khung)} nhãn lạ")
         if not khung: loi.append(f"{a.name}: không có nhãn"); continue
-        luu(im, ra/"anh"/thu_muc_con(h)/f"{h}.webp", CANH_XEM, "webp", CL_XEM, icc)
-        for k in {b[0] for b in khung}: dem[k] = dem.get(k,0)+1
-        danh_muc.append({"id":h,"goc":str(a.relative_to(goc)).replace("\\","/"),"phan":phan,"khung":khung})
-        if i % 500 == 0: print(f"  đã xử lý {i} ảnh…")
+        viec.append((str(a), str(ra/"anh"/thu_muc_con(h)/f"{h}.webp")))
+        ung_vien.append({"id":h,"goc":str(a.relative_to(goc)).replace("\\","/"),"phan":phan,"khung":khung})
+    print(f"Tìm thấy {len(viec)} ảnh cần nén (trùng bỏ {trung}). Đang nén bằng {os.cpu_count()} nhân CPU…")
+    # Lượt 2 (nặng, song song): nén ảnh
+    with ProcessPoolExecutor() as ex:
+        for i, (muc, (err, co_xoay)) in enumerate(zip(ung_vien, ex.map(_ma_hoa, viec, chunksize=16)), 1):
+            if err: loi.append(f"{muc['goc']}: {err}"); continue
+            if co_xoay: xoay.append(muc["goc"])
+            for k in {b[0] for b in muc["khung"]}: dem[k] = dem.get(k,0)+1
+            danh_muc.append(muc)
+            if i % 500 == 0: print(f"  đã nén {i}/{len(viec)} ảnh… ({time.time()-t0:.0f} giây)")
     if not danh_muc:
         print("LỖI: không tìm thấy cặp ảnh + nhãn YOLO nào (cần thư mục images/ và labels/ cạnh nhau).")
         print("Cấu trúc thư mục nhận được:")
@@ -121,7 +141,7 @@ def tao(goc, ra):
     (ra/"bao-cao.txt").write_text("\n".join(bc), encoding="utf-8")
     (ra/"goc-duong-dan.txt").write_text(str(Path(goc).resolve()), encoding="utf-8")
     print("\n".join(bc[:len(NHAN)+2]))
-    print(f"\nXong. Kho ảnh ở: {ra}")
+    print(f"\nXong sau {time.time()-t0:.0f} giây. Kho ảnh ở: {ra}")
 
 def tim(kho, ma_can, chi_tiet=False):
     kho = Path(kho); meta = json.loads((kho/"danh-muc.json").read_text(encoding="utf-8"))
