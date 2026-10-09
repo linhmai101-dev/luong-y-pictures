@@ -24,7 +24,7 @@ Nguyên tắc: không chỉnh màu, không lọc làm đẹp (màu lưỡi là d
 """
 import sys, os, io, json, hashlib
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageOps
 # Cửa sổ lệnh Windows mặc định không in được tiếng Việt -> ép UTF-8 để không bị dừng giữa chừng
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -87,6 +87,9 @@ def _ma_hoa(viec):
             huong = im.getexif().get(274, 1)
         except Exception:
             huong = 1
+        # Khung nhãn của bộ dữ liệu được vẽ trên ảnh ĐÃ xoay đúng chiều theo cờ EXIF
+        # (đã kiểm chứng bằng mắt trên ảnh thật), nên phải xoay ảnh theo cờ này.
+        im = ImageOps.exif_transpose(im)
         luu(im.convert("RGB"), Path(ra_file), CANH_XEM, "webp", CL_XEM, icc)
         return None, huong not in (1, None)
     except Exception as e:
@@ -99,16 +102,21 @@ def tao(goc, ra):
     goc, ra = Path(goc), Path(ra); (ra/"anh").mkdir(parents=True, exist_ok=True)
     danh_muc, loi, trung, dem, thay, xoay = [], [], 0, {k:0 for k in NHAN}, {}, []
     # Lượt 1 (nhanh, tuần tự): đọc nhãn, bỏ ảnh trùng, lập danh sách việc
-    viec, ung_vien = [], []
+    viec, ung_vien, nhan_cua, xung_dot = [], [], {}, {}
     for a, f, phan in sorted(cap_anh_nhan(goc), key=lambda x: str(x[0])):   # sắp xếp để kết quả luôn giống nhau
         try:
             h = hashlib.sha1(a.read_bytes()).hexdigest()[:12]
         except Exception as e:
             loi.append(f"{a.name}: {e}"); continue
-        if h in thay: trung += 1; continue
-        thay[h] = a.name
         khung_tho = doc_khung(f)
         khung = [b for b in khung_tho if b[0] in NHAN]          # bỏ nhãn lạ ngoài 20 loại đã biết
+        tap = frozenset(b[0] for b in khung)
+        if h in thay:
+            trung += 1
+            if tap != nhan_cua[h]:                                # cùng một ảnh nhưng nhãn khác nhau
+                xung_dot.setdefault(h, {thay[h]}).add(str(a.relative_to(goc)))
+            continue
+        thay[h] = str(a.relative_to(goc)); nhan_cua[h] = tap
         if len(khung) < len(khung_tho): loi.append(f"{a.name}: bỏ {len(khung_tho)-len(khung)} nhãn lạ")
         if not khung: loi.append(f"{a.name}: không có nhãn"); continue
         viec.append((str(a), str(ra/"anh"/thu_muc_con(h)/f"{h}.webp")))
@@ -120,6 +128,7 @@ def tao(goc, ra):
             if err: loi.append(f"{muc['goc']}: {err}"); continue
             if co_xoay: xoay.append(muc["goc"])
             for k in {b[0] for b in muc["khung"]}: dem[k] = dem.get(k,0)+1
+            if muc["id"] in xung_dot: muc["xung_dot"] = 1        # app sẽ không dùng ảnh này để hỏi/chấm
             danh_muc.append(muc)
             if i % 500 == 0: print(f"  đã nén {i}/{len(viec)} ảnh… ({time.time()-t0:.0f} giây)")
     if not danh_muc:
@@ -136,7 +145,9 @@ def tao(goc, ra):
     dung = sum(p.stat().st_size for p in (ra/"anh").rglob("*.webp"))
     bc = [f"Ảnh dùng được: {len(danh_muc)} | trùng bỏ: {trung} | lỗi: {len(loi)} | dung lượng bản xem: {dung/1e6:.0f} MB", ""]
     bc += [f"{NHAN[k][1]:32s} {dem.get(k,0):5d}" + ("" if NHAN[k][3] else "   (ngoài giáo trình – tham khảo)") for k in NHAN]
-    bc += ["", f"Ảnh có cờ xoay EXIF (cần mở xem thử vài ảnh): {len(xoay)}"] + xoay[:50]
+    bc += ["", f"Ảnh có cờ xoay EXIF (đã xoay đúng chiều): {len(xoay)}"] + xoay[:50]
+    bc += ["", f"Ảnh trùng nhưng nhãn KHÁC nhau (đã đánh dấu, app không dùng để hỏi): {len(xung_dot)}"]
+    bc += ["  " + " | ".join(sorted(v)) for v in list(xung_dot.values())[:50]]
     bc += ["", "Ảnh lỗi:"] + loi
     (ra/"bao-cao.txt").write_text("\n".join(bc), encoding="utf-8")
     (ra/"goc-duong-dan.txt").write_text(str(Path(goc).resolve()), encoding="utf-8")
@@ -148,7 +159,7 @@ def tim(kho, ma_can, chi_tiet=False):
     can = {MA[m] for m in ma_can if m in MA}
     sai = [m for m in ma_can if m not in MA]
     if sai: print("Mã không đúng:", sai, "\nCác mã:", ", ".join(MA)); return
-    khop = [a for a in meta["anh"] if {b[0] for b in a["khung"]} == can]
+    khop = [a for a in meta["anh"] if {b[0] for b in a["khung"]} == can and not a.get("xung_dot")]
     print(f"{len(khop)} ảnh có ĐÚNG và ĐỦ: {', '.join(NHAN[k][1] for k in sorted(can))}")
     for a in khop[:40]: print(" ", a["id"], a["goc"])
     if chi_tiet and khop:
