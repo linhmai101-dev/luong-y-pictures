@@ -34,6 +34,9 @@ except Exception:
 CANH_XEM, CL_XEM = 560, 75          # bản xem cả khung: WebP
 CANH_LUOI, CL_LUOI = 900, 95        # bản cắt sát lưỡi, lấy từ ảnh GỐC (không phóng to ảnh nhỏ)
 DUOI_LUOI = "jpg"
+CANH_GOC_TOI_DA = 1600   # ảnh gốc có cạnh dài lớn hơn mức này (khoảng 9% ảnh, chiếm hơn nửa dung lượng)
+                         # được thu về đúng mức này, lưu JPEG 95 màu 4:4:4 – vẫn vượt độ phân giải màn hình điện thoại
+NGAN_SACH = 900_000_000   # tổng dung lượng ảnh tối đa (Pages giới hạn ~1 GB); vượt thì tự thu nhóm ảnh rất lớn xuống thêm
 CHE_DO = "goc"   # "goc": chép NGUYÊN file ảnh gốc (không xử lý lại, đúng từng byte) – app tự phóng vào vùng lưỡi
                  # "luoi": tạo bản cắt sát lưỡi nén JPEG 95 (nhẹ hơn, dùng khi cần tiết kiệm dung lượng)                   # JPEG 95, giữ đủ màu 4:4:4: chi tiết nhỏ (chấm đỏ, vết nứt, hạt rêu) trung thực hơn WebP
 LE_CAT = 0.12                       # lề quanh vùng các khung nhãn (giống app)
@@ -115,12 +118,18 @@ def _ma_hoa(viec):
         luu(im, Path(ra_file), CANH_XEM, "webp", CL_XEM, icc)
         x, y, w, h = cat = vung_cat(khung)
         luoi = im.crop((round(x*W), round(y*H), round((x+w)*W), round((y+h)*H)))
+        them = {}
         if CHE_DO == "goc":
-            Path(ra_goc).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(duong_dan, ra_goc)          # nguyên bản: không giải mã, không nén lại
+            goc_p = Path(ra_goc); goc_p.parent.mkdir(parents=True, exist_ok=True)
+            if max(W, H) <= CANH_GOC_TOI_DA:
+                shutil.copyfile(duong_dan, goc_p)       # nguyên bản: không giải mã, không nén lại
+                if goc_p.suffix != ".jpg": them["gx"] = goc_p.suffix
+            else:                                       # ảnh rất lớn: thu về cạnh dài 1600 px, đã xoay đúng chiều
+                luu(im, goc_p.with_suffix(".jpg"), CANH_GOC_TOI_DA, "jpg", 95, icc)
+                them["goc_thu"] = CANH_GOC_TOI_DA
         else:
             luu(luoi, Path(ra_luoi), CANH_LUOI, DUOI_LUOI, CL_LUOI, icc)   # thumbnail() không phóng to ảnh nhỏ
-        return None, huong not in (1, None), {"w": W, "h": H, "cat": cat, "net": do_net(luoi), "lw": luoi.size[0], "lh": luoi.size[1]}
+        return None, huong not in (1, None), {"w": W, "h": H, "cat": cat, "net": do_net(luoi), "lw": luoi.size[0], "lh": luoi.size[1], **them}
     except Exception as e:
         return str(e), False, None
 
@@ -151,7 +160,7 @@ def tao(goc, ra):
         duoi_goc = a.suffix.lower().replace(".jpeg", ".jpg")
         viec.append((str(a), str(ra/"anh"/thu_muc_con(h)/f"{h}.webp"), str(ra/"luoi"/thu_muc_con(h)/f"{h}.{DUOI_LUOI}"), khung,
                      str(ra/"goc"/thu_muc_con(h)/f"{h}{duoi_goc}")))
-        ung_vien.append({**({"gx": duoi_goc} if duoi_goc != ".jpg" else {}), "id":h,"goc":str(a.relative_to(goc)).replace("\\","/"),"phan":phan,"khung":khung})
+        ung_vien.append({"id":h,"goc":str(a.relative_to(goc)).replace("\\","/"),"phan":phan,"khung":khung})
     print(f"Tìm thấy {len(viec)} ảnh cần nén (trùng bỏ {trung}). Đang nén bằng {os.cpu_count()} nhân CPU…")
     # Lượt 2 (nặng, song song): nén ảnh
     with ProcessPoolExecutor() as ex:
@@ -163,6 +172,17 @@ def tao(goc, ra):
             if muc["id"] in xung_dot: muc["xung_dot"] = 1        # app sẽ không dùng ảnh này để hỏi/chấm
             danh_muc.append(muc)
             if i % 500 == 0: print(f"  đã nén {i}/{len(viec)} ảnh… ({time.time()-t0:.0f} giây)")
+    # Tự điều chỉnh: nếu vượt ngân sách, chỉ thu nhỏ thêm nhóm ảnh rất lớn (ảnh nguyên bản giữ nguyên)
+    def tong_dung():
+        return sum(p.stat().st_size for d in ("anh", "goc", "luoi") if (ra/d).exists() for p in (ra/d).rglob("*.*"))
+    for canh, cl in ((1280, 92), (1024, 90), (800, 88)):
+        if CHE_DO != "goc" or tong_dung() <= NGAN_SACH: break
+        lon = [m for m in danh_muc if m.get("goc_thu")]
+        print(f"Tổng {tong_dung()/1e6:.0f} MB vượt ngân sách {NGAN_SACH/1e6:.0f} MB → thu {len(lon)} ảnh rất lớn về {canh} px")
+        for m in lon:
+            f = ra/"goc"/thu_muc_con(m["id"])/f'{m["id"]}.jpg'
+            im = Image.open(f); icc = im.info.get("icc_profile")
+            luu(im.convert("RGB"), f, canh, "jpg", cl, icc); m["goc_thu"] = canh
     if danh_muc:
         thu_tu = sorted(range(len(danh_muc)), key=lambda i: danh_muc[i]["net"])
         for hang, i in enumerate(thu_tu):
@@ -185,7 +205,8 @@ def tao(goc, ra):
     dung = sum(p.stat().st_size for p in (ra/"anh").rglob("*.webp"))
     dung_luoi = sum(p.stat().st_size for p in (ra/"luoi").rglob("*.*")) if (ra/"luoi").exists() else 0
     dung_goc = sum(p.stat().st_size for p in (ra/"goc").rglob("*.*")) if (ra/"goc").exists() else 0
-    bc = [f"Ảnh dùng được: {len(danh_muc)} | trùng bỏ: {trung} | lỗi: {len(loi)} | bản xem: {dung/1e6:.0f} MB | bản cắt sát lưỡi: {dung_luoi/1e6:.0f} MB | ảnh gốc nguyên bản: {dung_goc/1e6:.0f} MB", ""]
+    so_thu = sum(1 for m in danh_muc if m.get("goc_thu"))
+    bc = [f"Ảnh dùng được: {len(danh_muc)} | trùng bỏ: {trung} | lỗi: {len(loi)} | bản xem: {dung/1e6:.0f} MB | bản cắt sát lưỡi: {dung_luoi/1e6:.0f} MB | ảnh gốc: {dung_goc/1e6:.0f} MB ({len(danh_muc)-so_thu} ảnh nguyên bản, {so_thu} ảnh rất lớn thu về {max([m.get("goc_thu",0) for m in danh_muc] or [0])} px)", ""]
     if danh_muc:
         import statistics as st
         rong = sorted(m["w"] for m in danh_muc); luoi_rong = sorted(m["lw"] for m in danh_muc)
