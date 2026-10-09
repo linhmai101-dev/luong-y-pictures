@@ -24,14 +24,16 @@ Nguyên tắc: không chỉnh màu, không lọc làm đẹp (màu lưỡi là d
 """
 import sys, os, io, json, hashlib
 from pathlib import Path
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageFilter, ImageStat
 # Cửa sổ lệnh Windows mặc định không in được tiếng Việt -> ép UTF-8 để không bị dừng giữa chừng
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 except Exception:
     pass
 
-CANH_XEM, CL_XEM = 560, 75          # bản xem: WebP
+CANH_XEM, CL_XEM = 560, 75          # bản xem cả khung: WebP
+CANH_LUOI, CL_LUOI = 900, 80        # bản cắt sát lưỡi, lấy từ ảnh GỐC (không phóng to ảnh nhỏ)
+LE_CAT = 0.12                       # lề quanh vùng các khung nhãn (giống app)
 CANH_CT, CL_CT = 1000, 85           # bản phóng to: JPEG 4:4:4 (giữ màu ở mép chấm đỏ, viền lưỡi)
 
 # id YOLO -> (mã, tên Việt, nhóm loại trừ lẫn nhau, có trong giáo trình?)
@@ -76,9 +78,25 @@ def luu(im, path, canh, fmt, q, icc=None):
 def thu_muc_con(h):
     return h[:2]   # chia 256 thư mục con để GitHub và máy tính duyệt nhanh
 
+def vung_cat(khung):
+    x0 = min(b[1]-b[3]/2 for b in khung); y0 = min(b[2]-b[4]/2 for b in khung)
+    x1 = max(b[1]+b[3]/2 for b in khung); y1 = max(b[2]+b[4]/2 for b in khung)
+    mx, my = (x1-x0)*LE_CAT, (y1-y0)*LE_CAT
+    x0, y0, x1, y1 = max(0, x0-mx), max(0, y0-my), min(1, x1+mx), min(1, y1+my)
+    return [round(x0,4), round(y0,4), round(x1-x0,4), round(y1-y0,4)]
+
+LAPLACE = ImageFilter.Kernel((3, 3), [0, 1, 0, 1, -4, 1, 0, 1, 0], scale=1)
+def do_net(im):
+    """Độ nét: phương sai sau lọc Laplace, đo trên vùng lưỡi đã đưa về cùng cỡ để so sánh được."""
+    # đưa về CÙNG cạnh dài 512 px (kể cả phóng ảnh nhỏ lên) để ảnh gốc độ phân giải thấp cũng bị chấm là kém nét
+    g = im.convert("L"); k = 512 / max(g.size)
+    g = g.resize((max(1, round(g.size[0]*k)), max(1, round(g.size[1]*k))), Image.BICUBIC)
+    return round(ImageStat.Stat(g.filter(LAPLACE)).var[0], 1)
+
 def _ma_hoa(viec):
-    """Chạy trong tiến trình con: mở, kiểm tra, nén một ảnh. Trả về (mã, lỗi, có_cờ_xoay)."""
-    duong_dan, ra_file = viec
+    """Chạy trong tiến trình con: mở, kiểm tra, nén một ảnh.
+    Trả về (lỗi, có_cờ_xoay, thông_tin) với thông_tin = {w,h,cat,net,lw,lh}."""
+    duong_dan, ra_file, ra_luoi, khung = viec
     try:
         im = Image.open(duong_dan); im.load()
         # chỉ giữ hồ sơ màu khi ảnh gốc là RGB (hồ sơ CMYK gắn vào ảnh RGB sẽ làm sai màu)
@@ -89,11 +107,15 @@ def _ma_hoa(viec):
             huong = 1
         # Khung nhãn của bộ dữ liệu được vẽ trên ảnh ĐÃ xoay đúng chiều theo cờ EXIF
         # (đã kiểm chứng bằng mắt trên ảnh thật), nên phải xoay ảnh theo cờ này.
-        im = ImageOps.exif_transpose(im)
-        luu(im.convert("RGB"), Path(ra_file), CANH_XEM, "webp", CL_XEM, icc)
-        return None, huong not in (1, None)
+        im = ImageOps.exif_transpose(im).convert("RGB")
+        W, H = im.size
+        luu(im, Path(ra_file), CANH_XEM, "webp", CL_XEM, icc)
+        x, y, w, h = cat = vung_cat(khung)
+        luoi = im.crop((round(x*W), round(y*H), round((x+w)*W), round((y+h)*H)))
+        luu(luoi, Path(ra_luoi), CANH_LUOI, "webp", CL_LUOI, icc)      # thumbnail() không phóng to ảnh nhỏ
+        return None, huong not in (1, None), {"w": W, "h": H, "cat": cat, "net": do_net(luoi), "lw": luoi.size[0], "lh": luoi.size[1]}
     except Exception as e:
-        return str(e), False
+        return str(e), False, None
 
 def tao(goc, ra):
     import time
@@ -119,18 +141,23 @@ def tao(goc, ra):
         thay[h] = str(a.relative_to(goc)); nhan_cua[h] = tap
         if len(khung) < len(khung_tho): loi.append(f"{a.name}: bỏ {len(khung_tho)-len(khung)} nhãn lạ")
         if not khung: loi.append(f"{a.name}: không có nhãn"); continue
-        viec.append((str(a), str(ra/"anh"/thu_muc_con(h)/f"{h}.webp")))
+        viec.append((str(a), str(ra/"anh"/thu_muc_con(h)/f"{h}.webp"), str(ra/"luoi"/thu_muc_con(h)/f"{h}.webp"), khung))
         ung_vien.append({"id":h,"goc":str(a.relative_to(goc)).replace("\\","/"),"phan":phan,"khung":khung})
     print(f"Tìm thấy {len(viec)} ảnh cần nén (trùng bỏ {trung}). Đang nén bằng {os.cpu_count()} nhân CPU…")
     # Lượt 2 (nặng, song song): nén ảnh
     with ProcessPoolExecutor() as ex:
-        for i, (muc, (err, co_xoay)) in enumerate(zip(ung_vien, ex.map(_ma_hoa, viec, chunksize=16)), 1):
+        for i, (muc, (err, co_xoay, tt)) in enumerate(zip(ung_vien, ex.map(_ma_hoa, viec, chunksize=16)), 1):
             if err: loi.append(f"{muc['goc']}: {err}"); continue
+            muc.update(tt)
             if co_xoay: xoay.append(muc["goc"])
             for k in {b[0] for b in muc["khung"]}: dem[k] = dem.get(k,0)+1
             if muc["id"] in xung_dot: muc["xung_dot"] = 1        # app sẽ không dùng ảnh này để hỏi/chấm
             danh_muc.append(muc)
             if i % 500 == 0: print(f"  đã nén {i}/{len(viec)} ảnh… ({time.time()-t0:.0f} giây)")
+    if danh_muc:
+        thu_tu = sorted(range(len(danh_muc)), key=lambda i: danh_muc[i]["net"])
+        for hang, i in enumerate(thu_tu):
+            danh_muc[i]["q"] = round(100 * hang / max(1, len(danh_muc) - 1))
     if not danh_muc:
         print("LỖI: không tìm thấy cặp ảnh + nhãn YOLO nào (cần thư mục images/ và labels/ cạnh nhau).")
         print("Cấu trúc thư mục nhận được:")
@@ -142,8 +169,20 @@ def tao(goc, ra):
             "nhan":{v[0]:{"ten":v[1],"nhom":v[2],"giao_trinh":v[3]} for v in NHAN.values()},
             "ma_so":{str(k):v[0] for k,v in NHAN.items()}, "anh":danh_muc}
     (ra/"danh-muc.json").write_text(json.dumps(meta, ensure_ascii=False, separators=(",",":")), encoding="utf-8")
+    # danh mục gọn cho app: chỉ những trường app dùng (nhẹ hơn ~40%, tải nhanh hơn trên điện thoại)
+    GIU = ("id", "khung", "cat", "q", "xung_dot")
+    gon = dict(meta); gon["anh"] = [{k: m[k] for k in GIU if k in m} for m in danh_muc]
+    (ra/"danh-muc-app.json").write_text(json.dumps(gon, ensure_ascii=False, separators=(",",":")), encoding="utf-8")
     dung = sum(p.stat().st_size for p in (ra/"anh").rglob("*.webp"))
-    bc = [f"Ảnh dùng được: {len(danh_muc)} | trùng bỏ: {trung} | lỗi: {len(loi)} | dung lượng bản xem: {dung/1e6:.0f} MB", ""]
+    dung_luoi = sum(p.stat().st_size for p in (ra/"luoi").rglob("*.webp")) if (ra/"luoi").exists() else 0
+    bc = [f"Ảnh dùng được: {len(danh_muc)} | trùng bỏ: {trung} | lỗi: {len(loi)} | bản xem: {dung/1e6:.0f} MB | bản cắt sát lưỡi: {dung_luoi/1e6:.0f} MB", ""]
+    if danh_muc:
+        import statistics as st
+        rong = sorted(m["w"] for m in danh_muc); luoi_rong = sorted(m["lw"] for m in danh_muc)
+        pv = lambda a, p: a[min(len(a)-1, int(p*len(a)))]
+        bc += [f"Chiều rộng ảnh gốc (px): nhỏ nhất {rong[0]}, 10% {pv(rong,.1)}, trung vị {pv(rong,.5)}, lớn nhất {rong[-1]}",
+               f"Chiều rộng vùng lưỡi đã cắt (px): 10% {pv(luoi_rong,.1)}, trung vị {pv(luoi_rong,.5)}",
+               f"Ảnh có vùng lưỡi hẹp dưới 300 px (gốc độ phân giải thấp): {sum(1 for x in luoi_rong if x < 300)}", ""]
     bc += [f"{NHAN[k][1]:32s} {dem.get(k,0):5d}" + ("" if NHAN[k][3] else "   (ngoài giáo trình – tham khảo)") for k in NHAN]
     bc += ["", f"Ảnh có cờ xoay EXIF (đã xoay đúng chiều): {len(xoay)}"] + xoay[:50]
     bc += ["", f"Ảnh trùng nhưng nhãn KHÁC nhau (đã đánh dấu, app không dùng để hỏi): {len(xung_dot)}"]
