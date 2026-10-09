@@ -1,4 +1,4 @@
-Ảnh dùng được: 6575 | trùng bỏ: 6863 | lỗi: 0 | bản xem: 72 MB | bản cắt sát lưỡi: 104 MB
+Ảnh dùng được: 6575 | trùng bỏ: 6863 | lỗi: 0 | bản xem: 72 MB | bản cắt sát lưỡi: 0 MB | ảnh gốc: 777 MB (5997 ảnh nguyên bản, 578 ảnh rất lớn thu về 1600 px)
 
 Chiều rộng ảnh gốc (px): nhỏ nhất 87, 10% 295, trung vị 580, lớn nhất 4320
 Chiều rộng vùng lưỡi đã cắt (px): 10% 225, trung vị 425
