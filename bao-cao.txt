@@ -1,0 +1,45 @@
+Ảnh dùng được: 6575 | trùng bỏ: 6863 | lỗi: 0 | dung lượng bản xem: 72 MB
+
+Lưỡi bình thường                    21
+Bác thai (rêu bong)                404
+Hồng thiệt (lưỡi đỏ)              1482
+Tử thiệt (lưỡi tím)                244
+Lưỡi bệu (bàn đại)                 684
+Lưỡi gầy mỏng                      284
+Điểm đỏ                           1245
+Lưỡi nứt (liệt văn)               1685
+Dấu răng (xỉ ngân)                1070
+Rêu trắng                         4933
+Rêu vàng                          1130
+Rêu đen                            116
+Rêu trơn ướt (hoạt thai)           244
+Vùng thận lõm                      486   (ngoài giáo trình – tham khảo)
+Vùng thận lồi                        2   (ngoài giáo trình – tham khảo)
+Vùng can đởm lõm                   189   (ngoài giáo trình – tham khảo)
+Vùng can đởm lồi                     5   (ngoài giáo trình – tham khảo)
+Vùng tỳ vị lõm                     179   (ngoài giáo trình – tham khảo)
+Vùng tâm phế lõm                     2   (ngoài giáo trình – tham khảo)
+Vùng tâm phế lồi                   370   (ngoài giáo trình – tham khảo)
+
+Ảnh có cờ xoay EXIF (cần mở xem thử vài ảnh): 19
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/test/images/10344.jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/test/images/10387.jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/test/images/10458.jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/test/images/10459.jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/test/images/10464.jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/test/images/10508.jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/C (117).jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/C (387).jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/C (663).jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/C (694).jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/C (817).jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/C (821).jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/C (827).jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/C (86).jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/C (868).jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/C (975).jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (247).jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/train/images/E (58).jpg
+shezhen datasets/shezhenv3-coco/shezhenv3-coco/val/images/tongue (362).jpg
+
+Ảnh lỗi:
