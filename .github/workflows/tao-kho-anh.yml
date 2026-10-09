@@ -108,8 +108,16 @@ jobs:
         run: |
           python xu-ly-kho-anh.py tao goc kho
           rm -f kho/goc-duong-dan.txt
-          rm -rf anh && mv kho/anh ./anh
-          mv kho/danh-muc.json kho/bao-cao.txt ./
+          # chặn trước khi lưu: GitHub Pages giới hạn khoảng 1 GB cho mỗi trang
+          TONG=$(du -sb kho | cut -f1); echo "Dung lượng kho mới: $((TONG/1000000)) MB"
+          if [ "$TONG" -gt 950000000 ]; then
+            echo "::error::Kho ảnh vượt 950 MB ($((TONG/1000000)) MB). Giảm CANH_LUOI hoặc CL_LUOI trong xu-ly-kho-anh.py rồi chạy lại."; exit 1
+          fi
+          # thay toàn bộ kết quả cũ bằng kết quả mới (mọi thư mục và tệp công cụ tạo ra)
+          for d in anh luoi; do rm -rf "$d"; [ -d "kho/$d" ] && mv "kho/$d" "./$d"; done
+          for f in danh-muc.json danh-muc-app.json bao-cao.txt; do [ -f "kho/$f" ] && mv -f "kho/$f" ./; done
+          ls kho   # phải trống – nếu còn gì là công cụ đã tạo thêm tệp mà workflow chưa chuyển
+          [ -z "$(ls -A kho)" ] || { echo "::error::Còn tệp chưa được chuyển khỏi thư mục tạm: $(ls -A kho)"; exit 1; }
           touch .nojekyll
 
       - name: Tạo bản phóng to theo mã
