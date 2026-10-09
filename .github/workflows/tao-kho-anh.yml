@@ -115,18 +115,18 @@ jobs:
 
       - name: Giải nén
         run: |
-          unzip -q ds.zip -d goc || { echo "::error::File zip bị hỏng hoặc tải chưa hết."; exit 1; }
+          unzip -q ds.zip -d _nguon || { echo "::error::File zip bị hỏng hoặc tải chưa hết."; exit 1; }
           rm ds.zip
           # nếu bên trong còn file zip con (coco / txt / xml) thì giải nén tiếp
-          find goc -type f -name "*.zip" | while IFS= read -r z; do
+          find _nguon -type f -name "*.zip" | while IFS= read -r z; do
             echo "Giải nén tiếp: $z"; unzip -q "$z" -d "${z%.zip}" && rm "$z"
           done
-          du -sh goc
+          du -sh _nguon
 
       - name: Tạo kho ảnh (lần đầu)
         if: ${{ inputs.chi_tiet == '' }}
         run: |
-          python xu-ly-kho-anh.py tao goc kho
+          python xu-ly-kho-anh.py tao _nguon kho
           rm -f kho/goc-duong-dan.txt
           # chặn trước khi lưu: GitHub Pages giới hạn khoảng 1 GB cho mỗi trang
           TONG=$(du -sb kho | cut -f1); echo "Dung lượng kho mới: $((TONG/1000000)) MB"
@@ -134,19 +134,19 @@ jobs:
             echo "::error::Kho ảnh vượt 950 MB ($((TONG/1000000)) MB). Giảm CANH_LUOI hoặc CL_LUOI trong xu-ly-kho-anh.py rồi chạy lại."; exit 1
           fi
           # thay toàn bộ kết quả cũ bằng kết quả mới (mọi thư mục và tệp công cụ tạo ra)
-          for d in anh luoi; do rm -rf "$d"; [ -d "kho/$d" ] && mv "kho/$d" "./$d"; done
-          for f in danh-muc.json danh-muc-app.json bao-cao.txt; do [ -f "kho/$f" ] && mv -f "kho/$f" ./; done
+          for d in anh luoi goc; do rm -rf "$d"; if [ -d "kho/$d" ]; then mv "kho/$d" "./$d"; fi; done
+          for f in danh-muc.json danh-muc-app.json bao-cao.txt; do if [ -f "kho/$f" ]; then mv -f "kho/$f" ./; fi; done
           ls kho   # phải trống – nếu còn gì là công cụ đã tạo thêm tệp mà workflow chưa chuyển
           [ -z "$(ls -A kho)" ] || { echo "::error::Còn tệp chưa được chuyển khỏi thư mục tạm: $(ls -A kho)"; exit 1; }
           touch .nojekyll
 
       - name: Tạo bản phóng to theo mã
         if: ${{ inputs.chi_tiet != '' }}
-        run: python xu-ly-kho-anh.py chitiet . goc $CHI_TIET
+        run: python xu-ly-kho-anh.py chitiet . _nguon $CHI_TIET
 
       - name: Lưu vào repo
         run: |
-          rm -rf goc kho
+          rm -rf _nguon kho
           git config user.name "kho-anh-bot"
           git config user.email "kho-anh-bot@users.noreply.github.com"
           git add -A
