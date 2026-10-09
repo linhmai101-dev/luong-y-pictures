@@ -11,7 +11,7 @@ on:
         options: ["dryad", "google-drive"]
         default: "dryad"
       drive_id:
-        description: "Nếu chọn google-drive: dán mã file Drive (phần giữa /d/ và /view trong link chia sẻ)"
+        description: "Nếu chọn google-drive: dán mã file hoặc cả link chia sẻ của file"
         required: false
         default: ""
       chi_tiet:
@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   tao:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     env:
       CHI_TIET: ${{ inputs.chi_tiet }}
@@ -36,9 +36,9 @@ jobs:
       DRIVE_ID: ${{ inputs.drive_id }}
       MIN_SIZE: "2000000000"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -58,9 +58,26 @@ jobs:
           UA="luong-y-pictures/1.0 (GitHub Actions; hoc tap ca nhan; lien he qua github.com/linhmai101-dev)"
           tai() { curl -L --retry 3 --retry-delay 15 -A "$UA" -o ds.zip -w "%{http_code}" "$1"; }
           if [ "$NGUON" = "google-drive" ]; then
-            [[ "$DRIVE_ID" =~ ^[A-Za-z0-9_-]{20,}$ ]] || { echo "Mã file Drive không hợp lệ: '$DRIVE_ID'"; exit 1; }
-            pip install -q gdown
-            gdown --fuzzy "https://drive.google.com/file/d/$DRIVE_ID/view" -O ds.zip || { echo "Không tải được từ Drive. Kiểm tra file đã để chế độ 'Bất kỳ ai có đường liên kết' chưa."; exit 1; }
+            # chấp nhận cả link lẫn mã; bỏ khoảng trắng, xuống dòng thừa
+            ID=$(printf '%s' "$DRIVE_ID" | tr -d '[:space:]')
+            if [[ "$ID" =~ /d/([A-Za-z0-9_-]+) ]]; then ID="${BASH_REMATCH[1]}"; fi
+            if [[ "$ID" =~ [?\&]id=([A-Za-z0-9_-]+) ]]; then ID="${BASH_REMATCH[1]}"; fi
+            [[ "$ID" =~ ^[A-Za-z0-9_-]{20,}$ ]] || { echo "::error::Mã file Drive không hợp lệ: '$DRIVE_ID'"; exit 1; }
+            echo "Mã file Drive: $ID"
+            # cách 1: tải thẳng từ máy chủ tải xuống của Google Drive (bỏ qua trang cảnh báo file lớn)
+            CODE=$(tai "https://drive.usercontent.google.com/download?id=$ID&export=download&confirm=t" || true)
+            echo "Cách 1 – mã phản hồi: $CODE, kích thước: $(stat -c%s ds.zip 2>/dev/null || echo 0)"
+            if [ "$(stat -c%s ds.zip 2>/dev/null || echo 0)" -lt "$MIN_SIZE" ]; then
+              (head -c 600 ds.zip 2>/dev/null | tr -cd '[:print:]\n' | head -20) || true; echo
+              echo "Cách 1 không được, thử cách 2 (gdown)…"
+              rm -f ds.zip
+              pip install -q gdown
+              gdown --fuzzy "https://drive.google.com/file/d/$ID/view" -O ds.zip 2>&1 | tail -5 || true
+            fi
+            if [ "$(stat -c%s ds.zip 2>/dev/null || echo 0)" -lt "$MIN_SIZE" ]; then
+              echo "::error::Không tải được từ Google Drive. Kiểm tra: file đã tải lên xong chưa, đã chia sẻ 'Bất kỳ ai có đường liên kết' chưa; nếu Drive báo quá nhiều lượt tải thì đợi vài giờ rồi chạy lại."
+              exit 1
+            fi
           else
             for URL in "https://datadryad.org/api/v2/files/4540656/download" "https://datadryad.org/downloads/file_stream/4540656"; do
               echo "Thử: $URL"; CODE=$(tai "$URL" || true); echo "Mã phản hồi: $CODE"
