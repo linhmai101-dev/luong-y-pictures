@@ -22,7 +22,7 @@ CÀI ĐẶT (một lần):   pip install pillow
 
 Nguyên tắc: không chỉnh màu, không lọc làm đẹp (màu lưỡi là dữ kiện chẩn đoán).
 """
-import sys, os, io, json, hashlib
+import sys, os, io, json, hashlib, shutil
 from pathlib import Path
 from PIL import Image, ImageOps, ImageFilter, ImageStat
 # Cửa sổ lệnh Windows mặc định không in được tiếng Việt -> ép UTF-8 để không bị dừng giữa chừng
@@ -32,7 +32,10 @@ except Exception:
     pass
 
 CANH_XEM, CL_XEM = 560, 75          # bản xem cả khung: WebP
-CANH_LUOI, CL_LUOI = 900, 80        # bản cắt sát lưỡi, lấy từ ảnh GỐC (không phóng to ảnh nhỏ)
+CANH_LUOI, CL_LUOI = 900, 95        # bản cắt sát lưỡi, lấy từ ảnh GỐC (không phóng to ảnh nhỏ)
+DUOI_LUOI = "jpg"
+CHE_DO = "goc"   # "goc": chép NGUYÊN file ảnh gốc (không xử lý lại, đúng từng byte) – app tự phóng vào vùng lưỡi
+                 # "luoi": tạo bản cắt sát lưỡi nén JPEG 95 (nhẹ hơn, dùng khi cần tiết kiệm dung lượng)                   # JPEG 95, giữ đủ màu 4:4:4: chi tiết nhỏ (chấm đỏ, vết nứt, hạt rêu) trung thực hơn WebP
 LE_CAT = 0.12                       # lề quanh vùng các khung nhãn (giống app)
 CANH_CT, CL_CT = 1000, 85           # bản phóng to: JPEG 4:4:4 (giữ màu ở mép chấm đỏ, viền lưỡi)
 
@@ -96,7 +99,7 @@ def do_net(im):
 def _ma_hoa(viec):
     """Chạy trong tiến trình con: mở, kiểm tra, nén một ảnh.
     Trả về (lỗi, có_cờ_xoay, thông_tin) với thông_tin = {w,h,cat,net,lw,lh}."""
-    duong_dan, ra_file, ra_luoi, khung = viec
+    duong_dan, ra_file, ra_luoi, khung, ra_goc = viec
     try:
         im = Image.open(duong_dan); im.load()
         # chỉ giữ hồ sơ màu khi ảnh gốc là RGB (hồ sơ CMYK gắn vào ảnh RGB sẽ làm sai màu)
@@ -112,7 +115,11 @@ def _ma_hoa(viec):
         luu(im, Path(ra_file), CANH_XEM, "webp", CL_XEM, icc)
         x, y, w, h = cat = vung_cat(khung)
         luoi = im.crop((round(x*W), round(y*H), round((x+w)*W), round((y+h)*H)))
-        luu(luoi, Path(ra_luoi), CANH_LUOI, "webp", CL_LUOI, icc)      # thumbnail() không phóng to ảnh nhỏ
+        if CHE_DO == "goc":
+            Path(ra_goc).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(duong_dan, ra_goc)          # nguyên bản: không giải mã, không nén lại
+        else:
+            luu(luoi, Path(ra_luoi), CANH_LUOI, DUOI_LUOI, CL_LUOI, icc)   # thumbnail() không phóng to ảnh nhỏ
         return None, huong not in (1, None), {"w": W, "h": H, "cat": cat, "net": do_net(luoi), "lw": luoi.size[0], "lh": luoi.size[1]}
     except Exception as e:
         return str(e), False, None
@@ -141,8 +148,10 @@ def tao(goc, ra):
         thay[h] = str(a.relative_to(goc)); nhan_cua[h] = tap
         if len(khung) < len(khung_tho): loi.append(f"{a.name}: bỏ {len(khung_tho)-len(khung)} nhãn lạ")
         if not khung: loi.append(f"{a.name}: không có nhãn"); continue
-        viec.append((str(a), str(ra/"anh"/thu_muc_con(h)/f"{h}.webp"), str(ra/"luoi"/thu_muc_con(h)/f"{h}.webp"), khung))
-        ung_vien.append({"id":h,"goc":str(a.relative_to(goc)).replace("\\","/"),"phan":phan,"khung":khung})
+        duoi_goc = a.suffix.lower().replace(".jpeg", ".jpg")
+        viec.append((str(a), str(ra/"anh"/thu_muc_con(h)/f"{h}.webp"), str(ra/"luoi"/thu_muc_con(h)/f"{h}.{DUOI_LUOI}"), khung,
+                     str(ra/"goc"/thu_muc_con(h)/f"{h}{duoi_goc}")))
+        ung_vien.append({**({"gx": duoi_goc} if duoi_goc != ".jpg" else {}), "id":h,"goc":str(a.relative_to(goc)).replace("\\","/"),"phan":phan,"khung":khung})
     print(f"Tìm thấy {len(viec)} ảnh cần nén (trùng bỏ {trung}). Đang nén bằng {os.cpu_count()} nhân CPU…")
     # Lượt 2 (nặng, song song): nén ảnh
     with ProcessPoolExecutor() as ex:
@@ -167,15 +176,16 @@ def tao(goc, ra):
         sys.exit(1)
     meta = {"nguon":"TCM-Tongue, Dryad DOI 10.5061/dryad.1c59zw48r",
             "nhan":{v[0]:{"ten":v[1],"nhom":v[2],"giao_trinh":v[3]} for v in NHAN.values()},
-            "ma_so":{str(k):v[0] for k,v in NHAN.items()}, "anh":danh_muc}
+            "ma_so":{str(k):v[0] for k,v in NHAN.items()}, "luoi_duoi":DUOI_LUOI, "che_do":CHE_DO, "anh":danh_muc}
     (ra/"danh-muc.json").write_text(json.dumps(meta, ensure_ascii=False, separators=(",",":")), encoding="utf-8")
     # danh mục gọn cho app: chỉ những trường app dùng (nhẹ hơn ~40%, tải nhanh hơn trên điện thoại)
-    GIU = ("id", "khung", "cat", "q", "xung_dot")
+    GIU = ("id", "khung", "cat", "q", "xung_dot", "gx")
     gon = dict(meta); gon["anh"] = [{k: m[k] for k in GIU if k in m} for m in danh_muc]
     (ra/"danh-muc-app.json").write_text(json.dumps(gon, ensure_ascii=False, separators=(",",":")), encoding="utf-8")
     dung = sum(p.stat().st_size for p in (ra/"anh").rglob("*.webp"))
-    dung_luoi = sum(p.stat().st_size for p in (ra/"luoi").rglob("*.webp")) if (ra/"luoi").exists() else 0
-    bc = [f"Ảnh dùng được: {len(danh_muc)} | trùng bỏ: {trung} | lỗi: {len(loi)} | bản xem: {dung/1e6:.0f} MB | bản cắt sát lưỡi: {dung_luoi/1e6:.0f} MB", ""]
+    dung_luoi = sum(p.stat().st_size for p in (ra/"luoi").rglob("*.*")) if (ra/"luoi").exists() else 0
+    dung_goc = sum(p.stat().st_size for p in (ra/"goc").rglob("*.*")) if (ra/"goc").exists() else 0
+    bc = [f"Ảnh dùng được: {len(danh_muc)} | trùng bỏ: {trung} | lỗi: {len(loi)} | bản xem: {dung/1e6:.0f} MB | bản cắt sát lưỡi: {dung_luoi/1e6:.0f} MB | ảnh gốc nguyên bản: {dung_goc/1e6:.0f} MB", ""]
     if danh_muc:
         import statistics as st
         rong = sorted(m["w"] for m in danh_muc); luoi_rong = sorted(m["lw"] for m in danh_muc)
