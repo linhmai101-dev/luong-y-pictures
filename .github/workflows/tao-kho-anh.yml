@@ -6,10 +6,10 @@ on:
   workflow_dispatch:
     inputs:
       nguon:
-        description: "Lấy bộ dữ liệu từ đâu"
+        description: "Lấy bộ dữ liệu từ đâu (kho-luu-tru = bản đã cất trong mục Releases của repo; lần đầu chọn google-drive)"
         type: choice
-        options: ["dryad", "google-drive"]
-        default: "dryad"
+        options: ["kho-luu-tru", "google-drive", "dryad"]
+        default: "kho-luu-tru"
       drive_id:
         description: "Nếu chọn google-drive: dán mã file hoặc cả link chia sẻ của file"
         required: false
@@ -35,6 +35,8 @@ jobs:
       NGUON: ${{ inputs.nguon }}
       DRIVE_ID: ${{ inputs.drive_id }}
       MIN_SIZE: "2000000000"
+      GH_TOKEN: ${{ github.token }}
+      BAN_LUU: du-lieu-goc
     steps:
       - uses: actions/checkout@v5
 
@@ -57,7 +59,16 @@ jobs:
         run: |
           UA="luong-y-pictures/1.0 (GitHub Actions; hoc tap ca nhan; lien he qua github.com/linhmai101-dev)"
           tai() { curl -L --retry 3 --retry-delay 15 -A "$UA" -o ds.zip -w "%{http_code}" "$1"; }
-          if [ "$NGUON" = "google-drive" ]; then
+          if [ "$NGUON" = "kho-luu-tru" ]; then
+            if ! gh release view "$BAN_LUU" > /dev/null 2>&1; then
+              echo "::error::Chưa có bản lưu trữ trong mục Releases. Chạy một lần với nguồn google-drive; workflow sẽ tự cất bản lưu trữ."; exit 1
+            fi
+            gh release download "$BAN_LUU" --pattern "phan-*" --pattern "sha256-ban-goc.txt" --dir luu --clobber
+            cat luu/phan-* > ds.zip
+            # đối chiếu mã kiểm tra: bảo đảm ghép đủ, đúng bản gốc
+            (cd luu && awk '{print $1"  ../ds.zip"}' sha256-ban-goc.txt | sha256sum -c -) || { echo "::error::Bản lưu trữ ghép lại không khớp mã kiểm tra."; exit 1; }
+            cp luu/sha256-ban-goc.txt ./sha256-ban-goc.txt; rm -rf luu
+          elif [ "$NGUON" = "google-drive" ]; then
             # chấp nhận cả link lẫn mã; bỏ khoảng trắng, xuống dòng thừa
             ID=$(printf '%s' "$DRIVE_ID" | tr -d '[:space:]')
             if [[ "$ID" =~ /d/([A-Za-z0-9_-]+) ]]; then ID="${BASH_REMATCH[1]}"; fi
@@ -91,7 +102,16 @@ jobs:
             echo "::error::Không tải được bộ dữ liệu ($SIZE byte). Nếu nguồn là Dryad: Dryad chặn tải tự động – hãy chạy lại với nguồn google-drive."
             exit 1
           fi
-          sha256sum ds.zip | tee sha256-ban-goc.txt
+          [ "$NGUON" = "kho-luu-tru" ] || sha256sum ds.zip | tee sha256-ban-goc.txt
+          # lần đầu tải thành công: cất bản gốc vào Releases (chia phần dưới 2 GB theo giới hạn của GitHub)
+          if [ "$NGUON" != "kho-luu-tru" ] && ! gh release view "$BAN_LUU" > /dev/null 2>&1; then
+            split -b 1900m -d -a 2 ds.zip phan-
+            gh release create "$BAN_LUU" phan-* sha256-ban-goc.txt \
+              --title "Dữ liệu gốc TCM-Tongue (Dryad 10.5061/dryad.1c59zw48r)" \
+              --notes "Bản lưu trữ để workflow dùng lại, không phải tải lại từ Drive. Ghép: cat phan-* > shezhen_datasets1.zip, rồi đối chiếu sha256-ban-goc.txt."
+            rm -f phan-*
+            echo "Đã cất bản lưu trữ vào Releases/$BAN_LUU"
+          fi
 
       - name: Giải nén
         run: |
